@@ -3,7 +3,28 @@
 This is a fork of [AnyLabeling](https://github.com/vietanhdev/anylabeling), slightly modified with new shapes to allow
 for the creation of bounding boxes at fixed aspect ratios (which I refer to with the acronym **FAR**) in a
 user-friendly way. Currently, it supports human-made annotations, auto-labeling support may come sometime in the future.
-The original `README.md` follows:
+The original `README.md` is included below this small section.
+
+## Installation
+
+The regular [installation instructions](https://anylabeling.nrl.ai/docs/installation), if followed, will NOT install this
+version of AnyLabeling. To install this version, I recommend a modified version of the third method, 
+which has been copied below.
+
+***NOTE:** for the git URL, use HTTPS URL from this repository, not the original AnyLabeling repository.*
+
+```bash
+# after navigating to a directory of your choosing...
+git clone https://github.com/RafeLoya/anylabeling-FAR.git
+cd anylabeling-FAR
+pip install .
+```
+
+To start the program, simply do the following while in the `.../anylabeling-FAR` directory:
+
+```bash
+anylabeling
+```
 
 # Original `README.md`
 
