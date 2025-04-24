@@ -1,3 +1,12 @@
+# AnyLabeling-FAR
+
+This is a fork of [AnyLabeling](https://github.com/vietanhdev/anylabeling), slightly modified with new shapes to allow
+for the creation of bounding boxes at fixed aspect ratios (which I refer to with the acronym **FAR**) in a
+user-friendly way. Currently, it supports human-made annotations, auto-labeling support may come sometime in the future.
+The original `README.md` follows:
+
+# Original `README.md`
+
 <p align="center">
   <img alt="AnyLabeling" style="width: 128px; max-width: 100%; height: auto;" src="https://github.com/user-attachments/assets/847e47e6-acf0-4f96-9ed9-5485ab405ae0"/>
   <h1 align="center">🌟 AnyLabeling 🌟</h1>

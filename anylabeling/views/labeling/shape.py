@@ -16,6 +16,27 @@ DEFAULT_SELECT_FILL_COLOR = QtGui.QColor(0, 255, 0, 155)  # selected
 DEFAULT_VERTEX_FILL_COLOR = QtGui.QColor(0, 255, 0, 255)  # hovering
 DEFAULT_HVERTEX_FILL_COLOR = QtGui.QColor(255, 255, 255, 255)  # hovering
 
+ASPECT_RATIOS = {
+    "rectangle (16:9)": (16, 9),
+    "rectangle (9:16)": (9, 16),
+    "rectangle (7:5)": (7,5),
+    "rectangle (5:7)": (5, 7),
+    "rectangle (4:3)": (4, 3),
+    "rectangle (3:4)": (3, 4),
+    "rectangle (3:2)": (3, 2),
+    "rectangle (2:3)": (2, 3),
+}
+
+ASPECT_RATIO_ICONS = {
+    "rectangle (16:9)": "rectangle-16-9",
+    "rectangle (9:16)": "rectangle-9-16",
+    "rectangle (7:5)": "rectangle-7-5",
+    "rectangle (5:7)": "rectangle-5-7",
+    "rectangle (4:3)": "rectangle-4-3",
+    "rectangle (3:4)": "rectangle-3-4",
+    "rectangle (3:2)": "rectangle-3-2",
+    "rectangle (2:3)": "rectangle-2-3",
+}
 
 class Shape:
     """Shape data type"""
@@ -94,6 +115,14 @@ class Shape:
         if value not in [
             "polygon",
             "rectangle",
+            "rectangle (16:9)",
+            "rectangle (9:16)",
+            "rectangle (7:5)",
+            "rectangle (5:7)",
+            "rectangle (4:3)",
+            "rectangle (3:4)",
+            "rectangle (3:2)",
+            "rectangle (2:3)",
             "point",
             "line",
             "circle",
@@ -145,6 +174,34 @@ class Shape:
         x2, y2 = pt2.x(), pt2.y()
         return QtCore.QRectF(x1, y1, x2 - x1, y2 - y1)
 
+    def get_rect_with_aspect_ratio(self, pt1, pt2):
+        """Get rectangle from diagonal line w/ given aspect ratio"""
+        aspect_ratio = parse_aspect_ratio(self.shape_type)
+        if not aspect_ratio:
+            return self.get_rect_from_line(pt1, pt2)
+
+        w_ar, h_ar = aspect_ratio
+
+        # Calculate width and height with aspect ratio
+        width = abs(pt2.x() - pt1.x())
+        height = width * (h_ar / w_ar)
+
+        # Determine the direction based on user's drag
+        if pt2.x() >= pt1.x():
+            if pt2.y() >= pt1.y():
+                # Bottom-right quadrant
+                return QtCore.QRectF(pt1.x(), pt1.y(), width, height)
+            else:
+                # Top-right quadrant
+                return QtCore.QRectF(pt1.x(), pt1.y() - height, width, height)
+        else:
+            if pt2.y() >= pt1.y():
+                # Bottom-left quadrant
+                return QtCore.QRectF(pt1.x() - width, pt1.y(), width, height)
+            else:
+                # Top-left quadrant
+                return QtCore.QRectF(pt1.x() - width, pt1.y() - height, width, height)
+
     def paint(self, painter: QtGui.QPainter):  # noqa: max-complexity: 18
         """Paint shape using QPainter"""
         if self.points:
@@ -163,6 +220,14 @@ class Shape:
                 assert len(self.points) in [1, 2]
                 if len(self.points) == 2:
                     rectangle = self.get_rect_from_line(*self.points)
+                    line_path.addRect(rectangle)
+                if self.selected:
+                    for i in range(len(self.points)):
+                        self.draw_vertex(vrtx_path, i)
+            elif "rectangle (" in self.shape_type:
+                assert len(self.points) in [1, 2]
+                if len(self.points) == 2:
+                    rectangle = self.get_rect_with_aspect_ratio(self.points[0], self.points[1])
                     line_path.addRect(rectangle)
                 if self.selected:
                     for i in range(len(self.points)):
@@ -287,6 +352,28 @@ class Shape:
             if len(self.points) == 2:
                 rectangle = self.get_rect_from_line(*self.points)
                 path.addRect(rectangle)
+        # ==================================================================================
+        # "rectangle (16:9)",
+        # "rectangle (9:16)",
+        # "rectangle (7:5)",
+        # "rectangle (5:7)",
+        # "rectangle (4:3)",
+        # "rectangle (3:4)",
+        # "rectangle (3:2)",
+        # "rectangle (2:3)",
+        # elif "rectangle (" in self.shape_type:
+        #     assert len(self.points) in [1, 2]
+        #     if len(self.points) == 2:
+        #         rectangle = self.get_rect_with_aspect_ratio(self.points[0], self.points[1])
+        #         line_path.addRect(rectangle)
+        #     if self.selected:
+        #         for i in range(len(self.points)):
+        #             self.draw_vertex(vrtx_path, i)
+        elif "rectangle (" in self.shape_type:
+           path = QtGui.QPainterPath()
+           if len(self.points) == 2:
+               rectangle = self.get_rect_with_aspect_ratio(self.points[0], self.points[1])
+               path.addRect(rectangle)
         elif self.shape_type == "circle":
             path = QtGui.QPainterPath()
             if len(self.points) == 2:
@@ -337,3 +424,17 @@ class Shape:
 
     def __setitem__(self, key, value):
         self.points[key] = value
+
+
+def parse_aspect_ratio(shape_type):
+    """Get width and height aspect ratio from shape type string"""
+    if "rectangle (" not in shape_type:
+        return None
+
+    try:
+        ratio_str = shape_type.strip("rectangle ()")
+        w_str, h_str = ratio_str.split(":")
+        return float(w_str), float(h_str)
+    except (ValueError, IndexError):
+        return None
+

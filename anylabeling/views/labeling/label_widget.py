@@ -36,7 +36,7 @@ from . import utils
 from ...config import get_config, save_config
 from .label_file import LabelFile, LabelFileError
 from .logger import logger
-from .shape import Shape
+from .shape import Shape, ASPECT_RATIOS, ASPECT_RATIO_ICONS
 from .widgets import (
     AutoLabelingWidget,
     BrightnessContrastDialog,
@@ -389,6 +389,7 @@ class LabelingWidget(LabelDialog):
             self.tr("Start drawing rectangles"),
             enabled=False,
         )
+        aspect_ratio_actions = self.create_aspect_ratio_actions()
         create_cirle_mode = create_action(
             self.tr("Create Circle"),
             lambda: self.toggle_draw_mode(False, create_mode="circle"),
@@ -740,6 +741,7 @@ class LabelingWidget(LabelDialog):
             create_mode=create_mode,
             edit_mode=edit_mode,
             create_rectangle_mode=create_rectangle_mode,
+            aspect_ratio_actions=aspect_ratio_actions,
             create_cirle_mode=create_cirle_mode,
             create_line_mode=create_line_mode,
             create_point_mode=create_point_mode,
@@ -778,6 +780,7 @@ class LabelingWidget(LabelDialog):
             menu=(
                 create_mode,
                 create_rectangle_mode,
+                *aspect_ratio_actions,
                 create_cirle_mode,
                 create_line_mode,
                 create_point_mode,
@@ -796,6 +799,7 @@ class LabelingWidget(LabelDialog):
                 close,
                 create_mode,
                 create_rectangle_mode,
+                *aspect_ratio_actions,
                 create_cirle_mode,
                 create_line_mode,
                 create_point_mode,
@@ -934,6 +938,7 @@ class LabelingWidget(LabelDialog):
             None,
             create_mode,
             self.actions.create_rectangle_mode,
+            *self.actions.aspect_ratio_actions,
             self.actions.create_cirle_mode,
             self.actions.create_line_mode,
             self.actions.create_point_mode,
@@ -1107,6 +1112,32 @@ class LabelingWidget(LabelDialog):
 
         self.set_text_editing(False)
 
+    def create_aspect_ratio_actions(self):
+        """actions for all predefined aspect ratio rectangles"""
+        actions = []
+        for ratio_name, (w_ar, h_ar) in ASPECT_RATIOS.items():
+            def make_callback(ratio=ratio_name):
+                return lambda checked=False: self.toggle_draw_mode(False, create_mode=ratio)
+
+            # map ratio name to icon name
+            icon_name = ASPECT_RATIO_ICONS.get(
+                ratio_name,
+                ratio_name.lower().replace(" ", "-").replace("(", "").replace(")", "")
+            )
+
+            action = utils.new_action(
+                self,
+                self.tr(f"Create {ratio_name}"),
+                make_callback(),
+                None, # shortcut
+                # ratio_name.lower().replace(" ", "-").replace("(", "").replace(")", ""), # icon name
+                icon_name,
+                self.tr(f"Start drawing {ratio_name} rectangles"),
+                enabled=False,
+            )
+            actions.append(action)
+        return actions
+
     def set_language(self, language):
         if self._config["language"] == language:
             return
@@ -1183,6 +1214,7 @@ class LabelingWidget(LabelDialog):
         actions = (
             self.actions.create_mode,
             self.actions.create_rectangle_mode,
+            *self.actions.aspect_ratio_actions,
             self.actions.create_cirle_mode,
             self.actions.create_line_mode,
             self.actions.create_point_mode,
@@ -1214,6 +1246,8 @@ class LabelingWidget(LabelDialog):
         self.actions.save.setEnabled(False)
         self.actions.create_mode.setEnabled(True)
         self.actions.create_rectangle_mode.setEnabled(True)
+        for action in self.actions.aspect_ratio_actions:
+            action.setEnabled(True)
         self.actions.create_cirle_mode.setEnabled(True)
         self.actions.create_line_mode.setEnabled(True)
         self.actions.create_point_mode.setEnabled(True)
@@ -1308,6 +1342,9 @@ class LabelingWidget(LabelDialog):
         if edit:
             self.actions.create_mode.setEnabled(True)
             self.actions.create_rectangle_mode.setEnabled(True)
+            for action in self.actions.aspect_ratio_actions:
+                action_mode = action.text().replace("Create ", "")
+                action.setEnabled(action_mode != create_mode)
             self.actions.create_cirle_mode.setEnabled(True)
             self.actions.create_line_mode.setEnabled(True)
             self.actions.create_point_mode.setEnabled(True)
@@ -1316,6 +1353,9 @@ class LabelingWidget(LabelDialog):
             if create_mode == "polygon":
                 self.actions.create_mode.setEnabled(False)
                 self.actions.create_rectangle_mode.setEnabled(True)
+                for action in self.actions.aspect_ratio_actions:
+                    action_mode = action.text().replace("Create ", "")
+                    action.setEnabled(action_mode != create_mode)
                 self.actions.create_cirle_mode.setEnabled(True)
                 self.actions.create_line_mode.setEnabled(True)
                 self.actions.create_point_mode.setEnabled(True)
@@ -1323,13 +1363,23 @@ class LabelingWidget(LabelDialog):
             elif create_mode == "rectangle":
                 self.actions.create_mode.setEnabled(True)
                 self.actions.create_rectangle_mode.setEnabled(False)
+                for action in self.actions.aspect_ratio_actions:
+                    action_mode = action.text().replace("Create ", "")
+                    action.setEnabled(action_mode != create_mode)
                 self.actions.create_cirle_mode.setEnabled(True)
                 self.actions.create_line_mode.setEnabled(True)
                 self.actions.create_point_mode.setEnabled(True)
                 self.actions.create_line_strip_mode.setEnabled(True)
+            elif "rectangle (" in create_mode:
+                for action in self.actions.aspect_ratio_actions:
+                    action_mode = action.text().replace("Create ", "")
+                    action.setEnabled(action_mode != create_mode)
             elif create_mode == "line":
                 self.actions.create_mode.setEnabled(True)
                 self.actions.create_rectangle_mode.setEnabled(True)
+                for action in self.actions.aspect_ratio_actions:
+                    action_mode = action.text().replace("Create ", "")
+                    action.setEnabled(action_mode != create_mode)
                 self.actions.create_cirle_mode.setEnabled(True)
                 self.actions.create_line_mode.setEnabled(False)
                 self.actions.create_point_mode.setEnabled(True)
@@ -1337,6 +1387,9 @@ class LabelingWidget(LabelDialog):
             elif create_mode == "point":
                 self.actions.create_mode.setEnabled(True)
                 self.actions.create_rectangle_mode.setEnabled(True)
+                for action in self.actions.aspect_ratio_actions:
+                    action_mode = action.text().replace("Create ", "")
+                    action.setEnabled(action_mode != create_mode)
                 self.actions.create_cirle_mode.setEnabled(True)
                 self.actions.create_line_mode.setEnabled(True)
                 self.actions.create_point_mode.setEnabled(False)
@@ -1344,6 +1397,9 @@ class LabelingWidget(LabelDialog):
             elif create_mode == "circle":
                 self.actions.create_mode.setEnabled(True)
                 self.actions.create_rectangle_mode.setEnabled(True)
+                for action in self.actions.aspect_ratio_actions:
+                    action_mode = action.text().replace("Create ", "")
+                    action.setEnabled(action_mode != create_mode)
                 self.actions.create_cirle_mode.setEnabled(False)
                 self.actions.create_line_mode.setEnabled(True)
                 self.actions.create_point_mode.setEnabled(True)
@@ -1351,6 +1407,9 @@ class LabelingWidget(LabelDialog):
             elif create_mode == "linestrip":
                 self.actions.create_mode.setEnabled(True)
                 self.actions.create_rectangle_mode.setEnabled(True)
+                for action in self.actions.aspect_ratio_actions:
+                    action_mode = action.text().replace("Create ", "")
+                    action.setEnabled(action_mode != create_mode)
                 self.actions.create_cirle_mode.setEnabled(True)
                 self.actions.create_line_mode.setEnabled(True)
                 self.actions.create_point_mode.setEnabled(True)

@@ -8,7 +8,7 @@ from PyQt5.QtGui import QWheelEvent
 from anylabeling.services.auto_labeling.types import AutoLabelingMode
 
 from .. import utils
-from ..shape import Shape
+from ..shape import Shape, parse_aspect_ratio, ASPECT_RATIOS
 
 CURSOR_DEFAULT = QtCore.Qt.ArrowCursor
 CURSOR_POINT = QtCore.Qt.PointingHandCursor
@@ -143,6 +143,14 @@ class Canvas(
         if value not in [
             "polygon",
             "rectangle",
+            "rectangle (16:9)",
+            "rectangle (9:16)",
+            "rectangle (7:5)",
+            "rectangle (5:7)",
+            "rectangle (4:3)",
+            "rectangle (3:4)",
+            "rectangle (3:2)",
+            "rectangle (2:3)",
             "circle",
             "line",
             "point",
@@ -308,7 +316,7 @@ class Canvas(
             if self.create_mode in ["polygon", "linestrip"]:
                 self.line[0] = self.current[-1]
                 self.line[1] = pos
-            elif self.create_mode == "rectangle":
+            elif self.create_mode == "rectangle" or "rectangle" in self.create_mode:
                 self.line.points = [self.current[0], pos]
                 self.line.close()
             elif self.create_mode == "circle":
@@ -449,6 +457,15 @@ class Canvas(
                         assert len(self.current.points) == 1
                         self.current.points = self.line.points
                         self.finalise()
+                    elif any(ratio in self.create_mode for ratio in ASPECT_RATIOS.keys()):
+                        if self.current and self.line:  # Make sure both exist
+                            self.current.points = self.line.points
+                            self.finalise()
+                        else:
+                            # Handle error case - either reset drawing or show a message
+                            self.current = None
+                            self.drawing_polygon.emit(False)  # Signal that drawing has ended
+                            self.update()
                     elif self.create_mode == "linestrip":
                         self.current.add_point(self.line[1])
                         self.line[0] = self.current[-1]
@@ -953,6 +970,46 @@ class Canvas(
                 QtCore.QPointF(x_min, y_min),
                 QtCore.QPointF(x_max, y_max),
             ]
+        elif "rectangle (" in self.current.shape_type:
+            ar = parse_aspect_ratio(self.current.shape_type)
+            if ar and len(ar) == 2:
+                w_ar, h_ar = ar
+                # if len(ar) == 2:
+                # w_ar, h_ar = float(ar[0]), float(ar[1])
+
+                pt1, pt2 = self.current.points
+
+                width = abs(pt2.x() - pt1.x())
+                height = width * (h_ar / w_ar)
+
+                is_right = pt2.x() > pt1.x()
+                is_bottom = pt2.y() > pt1.y()
+
+                if is_right and is_bottom:
+                    self.current.points = [
+                        QtCore.QPointF(pt1.x(), pt1.y()),
+                        QtCore.QPointF(pt1.x() + width, pt1.y() + height),
+                    ]
+                elif is_right and not is_bottom:
+                    self.current.points = [
+                        QtCore.QPointF(pt1.x(), pt1.y() - height),
+                        QtCore.QPointF(pt1.x() + width, pt1.y()),
+                    ]
+                elif not is_right and not is_bottom:
+                    self.current.points = [
+                        QtCore.QPointF(pt1.x() - width, pt1.y() - height),
+                        QtCore.QPointF(pt1.x(), pt1.y()),
+                    ]
+
+                x_min = min(self.current.points[0].x(), self.current.points[1].x())
+                y_min = min(self.current.points[0].y(), self.current.points[1].y())
+                x_max = max(self.current.points[0].x(), self.current.points[1].x())
+                y_max = max(self.current.points[0].y(), self.current.points[1].y())
+                self.current.points = [
+                    QtCore.QPointF(x_min, y_min),
+                    QtCore.QPointF(x_max, y_max),
+                ]
+
         self.shapes.append(self.current)
         self.store_shapes()
         self.current = None

@@ -43,6 +43,14 @@
         <file>images/polygon.png</file>
         <file>images/quit.png</file>
         <file>images/rectangle.png</file>
+        <file>images/rectangle-16-9.png</file>
+        <file>images/rectangle-9-16.png</file>
+        <file>images/rectangle-7-5.png</file>
+        <file>images/rectangle-5-7.png</file>
+        <file>images/rectangle-4-3.png</file>
+        <file>images/rectangle-3-4.png</file>
+        <file>images/rectangle-3-2.png</file>
+        <file>images/rectangle-2-3.png</file>
         <file>images/resetall.png</file>
         <file>images/save-as.png</file>
         <file>images/scissors.png</file>
